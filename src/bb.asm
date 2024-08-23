@@ -63,12 +63,39 @@ nextbyte:
     inc di
     loop nextbyte
 
+    ; create the new file
+    mov ah,3ch
+    mov cx,0
+    mov dx,path
+    int 21h
+    jc error
+    mov [filehandle],ax         ; store filehandle
+
+    ; write data to file handle
+    ; (see: https://stanislavs.org/helppc/int_21-40.html)
+    mov ah,40h
+    mov bx,[filehandle]
+    mov cx,[nrbytes]
+    mov dx,buffer
+    int 21h
+    jc error
+
+    ; close file
+    ; (see: https://stanislavs.org/helppc/int_21-3e.html)
+    mov bx,[filehandle]
+    mov ah,3eh
+    int 21h
+    jc error
+
     ; exit program
+    mov ah,9
+    mov dx,donestr
+    int 21h
     int 20h
 
-;
+;-------------------------------------------------------------------------------
 ; Print value in BX to screen
-;
+;-------------------------------------------------------------------------------
 printhex:
     mov dl,bh
     mov cl,4
@@ -83,6 +110,9 @@ printhex:
     call print_nibble
     ret
 
+;-------------------------------------------------------------------------------
+; print lower nibble in DL to the screen
+;-------------------------------------------------------------------------------
 print_nibble:
     and dl,0Fh
     add dl,'0'
@@ -94,6 +124,9 @@ print_digit:
     int 21h
     ret
 
+;-------------------------------------------------------------------------------
+; write a newline character and a carriage return character
+;-------------------------------------------------------------------------------
 lncr:
     mov ah,2
     mov dl,`\n`
@@ -101,6 +134,17 @@ lncr:
     mov dl,`\r`
     int 21h
     ret
+
+;-------------------------------------------------------------------------------
+; print error and terminate program
+;-------------------------------------------------------------------------------
+error:
+    mov dx,errorstring          ; set pointer to error string
+    mov ah,09h                  ; print error string to screen
+    int 21h                     ; run it
+    
+    mov ah,00h                  ; terminate program
+    int 21h                     ; run it
 
 ;-------------------- SECTION DATA --------------------------------------------- 
 section .data
@@ -111,6 +155,12 @@ numbytesstr:
 writingtostr:
     db "Writing to: $"
 
+errorstring:
+    db "An error was encountered.$"
+
+donestr:
+    db "All done!$"
+
 ;-------------------- SECTION BSS ----------------------------------------------
 section .bss       
 
@@ -118,9 +168,13 @@ section .bss
 nrbytes:
     resb 2
 
+; dword with file pointer
+filehandle:
+    resb 2
+
 ; 256 byte buffer
 path:
     resb 256
 
+; data to write
 buffer:
-    resb 1024

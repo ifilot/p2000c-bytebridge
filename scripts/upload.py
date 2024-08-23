@@ -21,7 +21,7 @@ def upload(file):
     print('Response: 0x%04X' % struct.unpack('<H', rsp))
     
     # transmit filename
-    filename = bytearray("b:test.com".encode('ascii'))
+    filename = bytearray("b:bb5.com".encode('ascii'))
     filename.append(0x00)
     ser.write(filename)
     
