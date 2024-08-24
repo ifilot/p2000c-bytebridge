@@ -4,6 +4,11 @@ CPU 8086    ; specifically compile for 8086 architecture (compatible with 8088)
     org 100h
 
 start:
+    mov dx,readystr         ; set pointer to message string
+    mov ah,09h              ; print error string to screen
+    int 21h                 ; run it
+    call lncr
+
     ; read number of bytes to transfer from serial port
     mov ah,2
     int 14h                 ; receive lower byte filelength
@@ -40,20 +45,22 @@ nextchar:
 
     ; print path to screen
     dec di
-    mov si,di
-    mov al,'$'
+    mov si,di               ; store pointer to terminating byte of filename
+    mov al,'$'              ; set terminating character for screen print
     mov [di],al
     mov ah,9
-    mov dx,writingtostr
+    mov dx,filenamestr      ; print filename
     int 21h
     mov ah,9
     mov dx,path
     int 21h
     call lncr
-    mov al,0                ; restore terminating character
-    mov [di],al
-
+    
     ; read datastream
+    mov dx,startrecstr      ; set pointer to message string
+    mov ah,09h              ; print error string to screen
+    int 21h                 ; run it
+    call lncr
     mov di,buffer
     mov cx,[nrbytes]
 nextbyte:
@@ -63,13 +70,25 @@ nextbyte:
     inc di
     loop nextbyte
 
+    ; start writing procedure
+    mov ah,9
+    mov dx,writestr
+    int 21h
+    mov ah,9
+    mov dx,path
+    int 21h
+    call lncr
+
     ; create the new file
+    mov di,si               ; restore pointer to terminating byte of filename
+    mov al,0                ; restore terminating character
+    mov [di],al
     mov ah,3ch
     mov cx,0
     mov dx,path
     int 21h
     jc error
-    mov [filehandle],ax         ; store filehandle
+    mov [filehandle],ax     ; store filehandle
 
     ; write data to file handle
     ; (see: https://stanislavs.org/helppc/int_21-40.html)
@@ -146,17 +165,40 @@ error:
     mov ah,00h                  ; terminate program
     int 21h                     ; run it
 
+;-------------------------------------------------------------------------------
+; timeouts
+;-------------------------------------------------------------------------------
+timeout:
+    mov dx,timeoutstr           ; set pointer to error string
+    mov ah,09h                  ; print error string to screen
+    int 21h                     ; run it
+    
+    mov ah,00h                  ; terminate program
+    int 21h                     ; run it
+
 ;-------------------- SECTION DATA --------------------------------------------- 
 section .data
 
-numbytesstr:
-    db "Number of bytes: 0x$"
+readystr:
+    db "Ready to receive file. Start the transfer.$"
 
-writingtostr:
-    db "Writing to: $"
+numbytesstr:
+    db "Number of bytes to receive: 0x$"
+
+filenamestr:
+    db "Filename: $"
+
+startrecstr:
+    db "Receiving bytes. This might take a while.$"
+
+writestr:
+    db "Writing file to: $"
 
 errorstring:
     db "An error was encountered.$"
+
+timeoutstr:
+    db "Received timeout. Exiting.$"
 
 donestr:
     db "All done!$"

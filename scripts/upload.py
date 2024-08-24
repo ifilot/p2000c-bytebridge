@@ -20,12 +20,14 @@ def upload(file):
     rsp = ser.read(2)
     print('Response: 0x%04X' % struct.unpack('<H', rsp))
     
+    time.sleep(0.5) # wait second for P2000C to catch up
+    
     # transmit filename
-    filename = bytearray("b:bb5.com".encode('ascii'))
+    filename = bytearray("b:bb7.com".encode('ascii'))
     filename.append(0x00)
     ser.write(filename)
     
-    time.sleep(1) # wait second for P2000C to catch up
+    time.sleep(0.5) # wait second for P2000C to catch up
     
     # transmit data
     ser.write(data)
