@@ -70,6 +70,17 @@ nextbyte:
     inc di
     loop nextbyte
 
+    ; calculate CRC-16 checksum and output to screen
+    mov dx,crc16str         ; set pointer to message string
+    mov ah,09h              ; print error string to screen
+    int 21h                 ; run it
+
+    mov si,buffer           ; data pointer
+    mov dx,[nrbytes]        ; number of bytes
+    call crc16              ; CRC16 checksum is stored in BX
+    call printhex           ; output to screen
+    call lncr               ; call newline
+
     ; start writing procedure
     mov ah,9
     mov dx,writestr
@@ -155,6 +166,33 @@ lncr:
     ret
 
 ;-------------------------------------------------------------------------------
+; generate CRC16 checksum
+; INPUT:  SI - pointer to data
+;         DX - number of bytes
+; OUTPUT: BX - CRC16 checksum
+;-------------------------------------------------------------------------------
+crc16:
+    mov bx,0        ; start with a 0 checksum
+    mov al,0
+.crcloop:
+    mov ah,[si]     ; load character from memory
+    xor bx,ax       ; xor into top byte
+    inc si
+    mov cx,8        ; number of bits to shift
+.bitloop:
+    shl bx,1
+    jc .crc_poly    ; if highest bit is set, xor with polynomial
+    loop .bitloop
+    jmp .nextbyte
+.crc_poly:
+    xor bx,0x1021   ; xor with the XMODEM polynomial
+    loop .bitloop
+.nextbyte:
+    dec dx
+    jnz .crcloop
+    ret
+
+;-------------------------------------------------------------------------------
 ; print error and terminate program
 ;-------------------------------------------------------------------------------
 error:
@@ -196,6 +234,9 @@ writestr:
 
 errorstring:
     db "An error was encountered.$"
+
+crc16str:
+    db "CRC16 checksum: 0x$"
 
 timeoutstr:
     db "Received timeout. Exiting.$"
