@@ -4,10 +4,11 @@ import struct
 import time
 
 def main():
-    upload('../src/bb.com')
+    #upload('../src/bb.com', 'b:bb.com')
+    upload('../../../MSDOS/tetrix/src/tetrix.com', 'b:tetrix.com')
 
-def upload(file):
-    with open(file,'rb') as f:
+def upload(srcfile, dstfile):
+    with open(srcfile,'rb') as f:
         data = bytearray(f.read())
 
     ser = serial.Serial('COM6', 9600, parity=serial.PARITY_ODD)
@@ -32,10 +33,10 @@ def upload(file):
     rsp = ser.read(2)
     print('Response checksum: 0x%04X' % struct.unpack('<H', rsp))
     
-    time.sleep(0.5) # wait second for P2000C to catch up
+    time.sleep(1.0) # wait second for P2000C to catch up
     
     # transmit filename
-    filename = bytearray("b:bb14.com".encode('ascii'))
+    filename = bytearray(dstfile.encode('ascii'))
     filename.append(0x00)
     ser.write(filename)
     
