@@ -10,20 +10,32 @@ def upload(file):
     with open(file,'rb') as f:
         data = bytearray(f.read())
 
-    ser = serial.Serial('COM6', 1200)
+    ser = serial.Serial('COM6', 9600, parity=serial.PARITY_ODD)
     if not ser.isOpen():
         print("Opening port")
         ser.open()
     
-    print('Transferring package size: 0x%04x bytes' % len(data))
+    print('Transferring package size: 0x%04X bytes' % len(data))
+    print('Package checksum: 0x%04X' % crc16(data))
+    
+    # sending number of bytes to receive
     ser.write(struct.pack('<H', len(data))) # little endian
+    
+    # sending checksum
+    ser.write(struct.pack('<H', crc16(data)))
+    
+    # check response filesize
     rsp = ser.read(2)
-    print('Response: 0x%04X' % struct.unpack('<H', rsp))
+    print('Response filesize: 0x%04X bytes' % struct.unpack('<H', rsp))
+    
+    # check response checksum
+    rsp = ser.read(2)
+    print('Response checksum: 0x%04X' % struct.unpack('<H', rsp))
     
     time.sleep(0.5) # wait second for P2000C to catch up
     
     # transmit filename
-    filename = bytearray("b:bb7.com".encode('ascii'))
+    filename = bytearray("b:bb14.com".encode('ascii'))
     filename.append(0x00)
     ser.write(filename)
     
@@ -31,6 +43,20 @@ def upload(file):
     
     # transmit data
     ser.write(data)
+
+def crc16(data):
+    crc = int(0)
+    
+    poly = 0x1021
+    
+    for c in data: # fetch byte
+        crc ^= (c << 8) # xor into top byte
+        for i in range(8): # prepare to rotate 8 bits
+            crc = crc << 1 # rotate
+            if crc & 0x10000:
+                crc = (crc ^ poly) & 0xFFFF # xor with XMODEN polynomic
+    
+    return crc
 
 if __name__ == '__main__':
     main()
