@@ -2,9 +2,13 @@
 import serial
 import struct
 import time
+import tqdm
 
 def main():
-    upload('../src/bb.com', 'b:bb2.com')
+    #upload('../src/bb.com', 'b:bb2.com')
+    
+    # example game
+    upload('../examples/avoid.exe', 'b:avoid.exe')
 
 def upload(srcfile, dstfile):
     with open(srcfile,'rb') as f:
@@ -42,7 +46,12 @@ def upload(srcfile, dstfile):
     time.sleep(0.5) # wait second for P2000C to catch up
     
     # transmit data
-    ser.write(data)
+    nrchunks = len(data) // 256 + (1 if len(data) % 256 > 0 else 0)
+    s = 0
+    for i in tqdm.tqdm(range(nrchunks)):
+        ser.write(data[s:min(s+256, len(data))])
+        s += 256
+        time.sleep(0.1) # small delay to allow the P2C to catch up
 
 def crc16(data):
     crc = int(0)
