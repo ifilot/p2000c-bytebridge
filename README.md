@@ -150,3 +150,17 @@ INT 20
 > **Do not use `bootstrap.py` with `BB.COM`**. They are incompatible! Most,
 > likely, your machine will lock up and you have to reset it. (do not worry
 > though if it happens, nothing will break because of this)
+
+## Example program
+
+To test out `BB.COM`, an example program is provided in the form of the
+venerable game *Avoid the Awful Thing that Vaguely Resembles a Banana!!*. This
+program, created in 1987 by Curtis Smith, Thomas Karrmann, and Jack and Alice
+Evans is retrieved from
+[here](https://www.dosgames.com/game/avoid-the-awful-thing-that-vaguely-resembles-a-banana/).
+In the images below, one can see the result of the transfer procedure and of
+running the game.
+
+![file transfer over P2000C](img/p2000c-bytebridge-transfer-example.jpg)
+
+![file transfer over P2000C](img/p2000c-bytebridge-game-example.jpg)
