@@ -1,12 +1,13 @@
 # P2000C ByteBridge (BB) Serial File Transfer
 
 ## Purpose
-This repository allows files to be transmitted from a modern machine to the
-P2000C using its serial interface port. On the transmitter device, a Python
-script is executed which informs the P2000C on the file size, its name and a
-CRC16 checksum. After the P2000C is able to successfully relay this data back to
-the transmitter device, file transfer is conducted. If the CRC16 checksum is
-reproduced on the P2000C, the file will be written to the floppy drive.
+This repository contains the Byte Bridge utility, which allows files to be
+transmitted from a modern machine to the P2000C using its serial interface port.
+On the transmitter device, a Python script is executed which informs the P2000C
+on the file size, its name and a CRC16 checksum. After the P2000C is able to
+successfully relay this data back to the transmitter device, file transfer is
+conducted. If the CRC16 checksum is reproduced on the P2000C, the file will be
+written to the floppy drive.
 
 ![file transfer over P2000C](img/p2000c-bytebridge-transfer.jpg)
 
@@ -26,9 +27,12 @@ On the P2000C, run `BB.COM` and wait until the message
 Ready to receive file. Start the transfer.
 ```
 
-is seen. **Do not execute the Python script before this message is seen.**
-Premature execution of the Python script potentially results in the P2000C
-locking up, requiring the machine to reboot.
+is seen. 
+
+> [!WARNING]  
+> **Do not execute the Python script before this message is seen.**
+> Premature execution of the Python script potentially results in the P2000C
+> locking up, requiring the machine to reboot.
 
 Once the above message is seen on the P2000C, execute the script.
 
@@ -46,19 +50,19 @@ make
 
 Of course, to get `BB.COM` onto your P2000C, one would need to have some kind of
 transfer program, yet this is exactly the function that `BB.COM` is fulfilling.
-As such, we here provide a brief tutorial how to initially get `BB.COM` onto
-your machine.
+To tackle this "chicken-egg" problem, we here provide a brief tutorial how to
+initially get `BB.COM` onto your machine.
 
 1. Boot in the MS-DOS environment in your P2000T. It is important you start
    from a fresh boot to ensure the serial parameters are resetted to their
    default values.
 2. Open `DEBUG.COM`
 3. Type `A 100` to start the inline assembly procedure at memory address `$100`.
-   Copy the following instructions into the machine. For convenience, in the
-   code listing below, also comments are added to explain what the code is
-   doing. You do not have to copy these comments into your P2000C. Once you have
-   copied the listing below, simply hit <ENTER> twice to exit the
-   inline-assembly mode.
+   Copy the following instructions into the machine. In the code listing below,
+   also comments (the part starting with `;`) are added to explain what the code
+   is doing. Do not copy over these comments to the P2000C. Once you have copied
+   the listing below, simply hit `<ENTER>` twice to exit the inline-assembly
+   mode.
 
 ```
 MOV AH,2
@@ -97,26 +101,27 @@ INT 20
 
 5. At this point, the program resides in memory and you can run it. Before
    running this script, it is important to understand that the `INT 14,2`
-   command has a 20 second timeout. If no byte is retrieved in this time span,
-   the program will time out, potentially leading to undesired behavior. As
-   such, make sure that after you have run the program, you also execute the
-   Python code `bootstrap.py` on your modern machine. To run the program,
-   execute `G`. Once the program completes, you will return to the debug
-   program, but with `BB.COM` stored in memory starting at `$200`.
+   interrupt has a 20 second timeout. If no byte is retrieved in this time span,
+   the interrupt routine will time out, potentially leading to undesired
+   behavior. As such, make sure that after you have run the program, you also
+   execute the Python code `bootstrap.py` on your modern machine. To run the
+   program, execute `G`. Once the program completes, you will return to the
+   debug program, but with `BB.COM` stored in memory starting at `$200`.
 6. Let us test that the transfer was successful by deassembling the memory
-   starting at $200. `U 200 220`. The result should correspond to the assembly
-   as found in [the source file](src/bb.asm). If it differs, it is recommended
-   to start over from step 1. If you keep on struggling to transfer the file
-   over to your P2000C, please do not hesitate to ask a question via the
-   "Issues" tab in this Github repository.
+   starting at `$200` by running `U 200 220`. The result should correspond to
+   the assembly as found in [the source file](src/bb.asm). If it differs, it is
+   recommended to start over from step 1. *If you keep on struggling to transfer
+   the file over to your P2000C, please do not hesitate to ask a question via
+   the "Issues" tab in this Github repository.*
 7. If successful, you are now in the position to save the program to the floppy
    disk. For this, you need to know the size of the program, which is part of
    the output of the `bootstrap.py` program. First, specify the number of bytes
    by typing `R CX`. The machine will respond with `CX 0000` followed by `:` on
    a new line. On this line, type the number of bytes in hexadecimal notation
-   and press <ENTER>. You can check that you have supplied the right value
-   by typing `R`. You should see a response like the following. Verify that
-   the number after `CX=` is correct.
+   and press `<ENTER>`. You can check that you have supplied the right value by
+   typing `R`. You should see a response like the following. Verify that the
+   number after `CX=` is correct. (in this example, it is `02C3`, but it might
+   differ pending on which version of `BB.COM` you are using)
 
    ```
    AX=0000 BX=0000 CX=02C3 DX=0000 SP=FFEE BP=0000 SI=0000 DI=0000
@@ -124,9 +129,10 @@ INT 20
    ```
    
    Next, type `n b:bb.com` to store the program as a new file, on drive B, named
-   as `BB.COM`. Finally, start the write process by `w 200`, which will write
-   the number of bytes stored in `CX` starting at memory location `$200` to the
-   file specified via the `n` command. The machine will respond with some like
+   as `BB.COM`. Finally, start the write process by entering `w 200`, which will
+   write the number of bytes stored in `CX` starting at memory location `$200`
+   to the file specified via the `n` command. The machine will respond with some
+   like
 
    ```
    Writing 02C3 bytes
@@ -139,6 +145,6 @@ INT 20
 > [!IMPORTANT]  
 > The `bootstrap.py` script is quite minimal and uses a BAUD rate of 1200 to
 > transfer `BB.COM`. `BB.COM` and `upload.py` use different transfer parameters.
-> Do not mix these programs. Do **not** use `bootstrap.py` with `BB.COM`! Most,
+> **Do not mix `bootstrap.py` and `BB.COM`**. They are incompatible! Most,
 > likely, your machine will lock up and you have to reset it. (do not worry
 > though if it happens, nothing will break because of this)
