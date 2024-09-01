@@ -34,7 +34,9 @@ is seen.
 > Premature execution of the Python script potentially results in the P2000C
 > locking up, requiring the machine to reboot.
 
-Once the above message is seen on the P2000C, execute the script.
+Once the "Ready to receive file" message is seen on the P2000C, execute the
+Python script on the modern computer to start the file transfer. One should
+observe a response such as shown in the image above.
 
 ## Compilation instructions
 
@@ -145,6 +147,6 @@ INT 20
 > [!IMPORTANT]  
 > The `bootstrap.py` script is quite minimal and uses a BAUD rate of 1200 to
 > transfer `BB.COM`. `BB.COM` and `upload.py` use different transfer parameters.
-> **Do not mix `bootstrap.py` and `BB.COM`**. They are incompatible! Most,
+> **Do not use `bootstrap.py` with `BB.COM`**. They are incompatible! Most,
 > likely, your machine will lock up and you have to reset it. (do not worry
 > though if it happens, nothing will break because of this)
