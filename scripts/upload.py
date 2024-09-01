@@ -4,8 +4,7 @@ import struct
 import time
 
 def main():
-    #upload('../src/bb.com', 'b:bb.com')
-    upload('../../../MSDOS/tetrix/src/tetrix.com', 'b:tetrix.com')
+    upload('../src/bb.com', 'b:bb2.com')
 
 def upload(srcfile, dstfile):
     with open(srcfile,'rb') as f:

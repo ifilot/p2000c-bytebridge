@@ -49,7 +49,9 @@ transfer program, yet this is exactly the function that `BB.COM` is fulfilling.
 As such, we here provide a brief tutorial how to initially get `BB.COM` onto
 your machine.
 
-1. Boot in the MS-DOS environment in your P2000T.
+1. Boot in the MS-DOS environment in your P2000T. It is important you start
+   from a fresh boot to ensure the serial parameters are resetted to their
+   default values.
 2. Open `DEBUG.COM`
 3. Type `A 100` to start the inline assembly procedure at memory address `$100`.
    Copy the following instructions into the machine. For convenience, in the
@@ -99,17 +101,44 @@ INT 20
    the program will time out, potentially leading to undesired behavior. As
    such, make sure that after you have run the program, you also execute the
    Python code `bootstrap.py` on your modern machine. To run the program,
-   execute `G 100`. Once the program completes, you will return to the debug
+   execute `G`. Once the program completes, you will return to the debug
    program, but with `BB.COM` stored in memory starting at `$200`.
 6. Let us test that the transfer was successful by deassembling the memory
    starting at $200. `U 200 220`. The result should correspond to the assembly
-   as found in [the source file](src/bb.asm).
+   as found in [the source file](src/bb.asm). If it differs, it is recommended
+   to start over from step 1. If you keep on struggling to transfer the file
+   over to your P2000C, please do not hesitate to ask a question via the
+   "Issues" tab in this Github repository.
 7. If successful, you are now in the position to save the program to the floppy
    disk. For this, you need to know the size of the program, which is part of
    the output of the `bootstrap.py` program. First, specify the number of bytes
-   by typing `R CX`. Specify the length of the program, in bytes, in hexadecimal
-   notation to your machine. Next, type `n b:bb.com` to store the program as a
-   new file, on drive B, named as `BB.COM`. Finally, start the write process
-   by `w 200`, which will write the number of bytes stored in `CX` starting at
-   memory location `$200` to the file specified via the `n` command.
-8. The program is now stored on disk and you can test it.
+   by typing `R CX`. The machine will respond with `CX 0000` followed by `:` on
+   a new line. On this line, type the number of bytes in hexadecimal notation
+   and press <ENTER>. You can check that you have supplied the right value
+   by typing `R`. You should see a response like the following. Verify that
+   the number after `CX=` is correct.
+
+   ```
+   AX=0000 BX=0000 CX=02C3 DX=0000 SP=FFEE BP=0000 SI=0000 DI=0000
+   DS=0A4C ES=0A4C SS=04AC CS=04AC IP=0100 NV UP DI PL NZ NA PO NC
+   ```
+   
+   Next, type `n b:bb.com` to store the program as a new file, on drive B, named
+   as `BB.COM`. Finally, start the write process by `w 200`, which will write
+   the number of bytes stored in `CX` starting at memory location `$200` to the
+   file specified via the `n` command. The machine will respond with some like
+
+   ```
+   Writing 02C3 bytes
+   ```
+
+8. The program is now stored on disk. Exit the debugger by typing `q`, go to
+   drive B (`B:`) and run the program by typing `bb`. Use `upload.py` to
+   transfer a file.
+
+> [!IMPORTANT]  
+> The `bootstrap.py` script is quite minimal and uses a BAUD rate of 1200 to
+> transfer `BB.COM`. `BB.COM` and `upload.py` use different transfer parameters.
+> Do not mix these programs. Do **not** use `bootstrap.py` with `BB.COM`! Most,
+> likely, your machine will lock up and you have to reset it. (do not worry
+> though if it happens, nothing will break because of this)
