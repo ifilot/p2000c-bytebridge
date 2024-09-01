@@ -38,6 +38,13 @@ Once the "Ready to receive file" message is seen on the P2000C, execute the
 Python script on the modern computer to start the file transfer. One should
 observe a response such as shown in the image above.
 
+## Limitations
+
+So far, the program has been tested for files up to ~9KiB in size. I once tried
+a program that was a little bit over 60KiB, but found that the P2000C got
+out of sync with the modern computer. Potentially, it might also be related to
+memory issues. Please take this limitations into consideration.
+
 ## Compilation instructions
 
 `BB.COM` can be compiled using [NASM](https://www.nasm.us/). For convenience,
