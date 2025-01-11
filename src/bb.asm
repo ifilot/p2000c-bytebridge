@@ -1,77 +1,94 @@
-;-------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
 CPU 8086    ; specifically compile for 8086 architecture (compatible with 8088)
-;-------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
     org 100h
 
 start:
-    mov al,11101011b        ; 9600 BAUD, odd parity, single stop bit, 8bpp
+    ; configure terminal interface
+    mov al,11101011b        ; 9600 BAUD, odd parity, single stop bit, 8 bpp
     mov ah,0                ; set serial interface parameters
-    int 14h                 ; run it
+    int 14h                 ; run interrupt
 
-    mov dx,parameterstr
-    mov ah,09h
-    int 21h
-    call lncr
+    ; inform the user on settings
+    mov dx,parameterstr     ; load pointer to string
+    mov ah,09h              ; print string routine
+    int 21h                 ; run interrupt
+    call lncr               ; call newline routine
     mov dx,readystr         ; set pointer to message string
-    mov ah,09h              ; print error string to screen
-    int 21h                 ; run it
+    mov ah,09h              ; print string routine
+    int 21h                 ; run interrupt
     call lncr
 
     ; read number of bytes to transfer from serial port
-    call receive_word
-    mov [nrbytes],cx        ; store filelength
-    call receive_word
-    mov [checksum],cx       ; store checksum
-    mov cx,[nrbytes]
-    call send_word
-    mov cx,[checksum]
-    call send_word
+    call receive_word       ; receive 16 bit unsigned integer
+    mov [nrbytes],cx        ; store file length
+    call receive_word       ; receive next 16 bit unsigned integer
+    mov [checksum],cx       ; store checksum overall file checksum
+    mov cx,[nrbytes]        ; move total number of bytes to cx
+    call send_word          ; respond nr bytes
+    mov cx,[checksum]       ; move checksum
+    call send_word          ; respond checksum
     
     ; print number of bytes to screen
-    mov ah,9
-    mov dx,numbytesstr
-    int 21h
-    mov bx,[nrbytes]
-    call printhex
-    call lncr
+    mov dx,numbytesstr      ; load pointer to string
+    mov ah,9                ; print string routine
+    int 21h                 ; run interrupt
+    mov bx,[nrbytes]        ; load number of bytes
+    call printword          ; print number of bytes in hex to screen
+    call lncr               ; print newline character
 
     ; print checksum to screen
-    mov ah,9
-    mov dx,checksumstr
-    int 21h
-    mov bx,[checksum]
-    call printhex
-    call lncr
+    mov dx,checksumstr      ; load pointer to string
+    mov ah,9                ; print string routine
+    int 21h                 ; run interrupt
+    mov bx,[checksum]       ; load checksum
+    call printword          ; print number of bytes in hex to screen
+    call lncr               ; print newline character
+
+    ; calculate number of packages to receive
+    mov bx,[nrbytes]        ; load number of bytes
+    cmp bl,0                ; check if bl is zero
+    je skipinc              ; skip if zero
+    inc bh                  ; if not, increment bh
+skipinc:
+    mov [nrpackages],bh     ; store upper byte in number of packages
+
+    ; inform user about number of packages
+    mov dx,numpackstr       ; load pointer to string
+    mov ah,9                ; print string routine
+    int 21h                 ; run interrupt
+    mov bh,[nrpackages]     ; load number of packages
+    call printbyte          ; print number of packages in hex
+    call lncr               ; print newline character
 
     ; receive path over serial port
-    mov di,path
+    mov di,path             ; set pointer to path
 nextchar:
-    mov ah,2
-    mov al,ch
+    mov ah,2                ; read char over serial routine
     int 14h                 ; receive character
-    mov [di],al
-    inc di
-    cmp al,0
-    jne nextchar
+    mov [di],al             ; store character
+    inc di                  ; increment pointer
+    cmp al,0                ; check for terminating character
+    jne nextchar            ; if not, read next character
 
     ; print path to screen
-    dec di
-    mov [termbyte],di       ; store pointer to terminating byte of filename
+    dec di                  ; decrement string pointer
+    mov [termbyte],di       ; store pointer to terminating byte (needed later)
     mov al,'$'              ; set terminating character for screen print
-    mov [di],al
-    mov ah,9
+    mov [di],al             ; store at pointer
+    mov ah,9                ; print string routine
     mov dx,filenamestr      ; print filename
-    int 21h
-    mov ah,9
-    mov dx,path
-    int 21h
-    call lncr
-    
+    int 21h                 ; run interrupt
+    mov ah,9                ; print string routine
+    mov dx,path             ; set pointer to file path string
+    int 21h                 ; run interrupt
+    call lncr               ; print newline character
+
     ; read datastream
     mov dx,startrecstr      ; set pointer to message string
     mov ah,09h              ; print error string to screen
     int 21h                 ; run it
-    call lncr
+    call lncr               ; print newline character
     mov di,buffer
     mov cx,[nrbytes]
 nextbyte:
@@ -162,19 +179,23 @@ send_word:
 ;-------------------------------------------------------------------------------
 ; Print value in BX to screen
 ;-------------------------------------------------------------------------------
-printhex:
-    mov dl,bh
-    mov cl,4
-    ror dl,cl
-    call print_nibble
-    mov dl,bh
-    call print_nibble
-    mov dl,bl
-    ror dl,cl
-    call print_nibble
-    mov dl,bl
-    call print_nibble
+printword:
+    call printbyte          ; print BH to screen
+    mov bh, bl              ; put BL in BH
+    call printbyte          ; print BL to screen
     ret
+
+;-------------------------------------------------------------------------------
+; Print value in BH to screen
+;-------------------------------------------------------------------------------
+printbyte:
+    mov dl,bh
+    mov cl,4                ; load number of bits to shift
+    ror dl,cl               ; shift 4 bits in dl
+    call print_nibble       ; print upper nibble
+    mov dl,bh               ; load bl again in bh
+    call print_nibble       ; print lower nibble
+ret
 
 ;-------------------------------------------------------------------------------
 ; print lower nibble in DL to the screen
@@ -265,6 +286,9 @@ numbytesstr:
 filenamestr:
     db "Filename: $"
 
+numpackstr:
+    db "Number of packages to receive: 0x$"
+
 startrecstr:
     db "Receiving bytes. This might take a while.$"
 
@@ -296,6 +320,10 @@ nrbytes:
 ; XMODEM CRC16 checksum
 checksum:
     resb 2
+
+; number of 256-byte packages to receive
+nrpackages:
+    resb 1
 
 ; dword with file pointer
 filehandle:

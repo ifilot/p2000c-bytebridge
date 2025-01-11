@@ -5,16 +5,16 @@ import time
 import tqdm
 
 def main():
-    #upload('../src/bb.com', 'b:bb2.com')
+    upload('../src/bb.com', 'b:bb2.com')
     
     # example game
-    upload('../examples/avoid.exe', 'b:avoid.exe')
+    #upload('../examples/avoid.exe', 'b:avoid.exe')
 
 def upload(srcfile, dstfile):
     with open(srcfile,'rb') as f:
         data = bytearray(f.read())
 
-    ser = serial.Serial('COM6', 9600, parity=serial.PARITY_ODD)
+    ser = serial.Serial('COM16', 9600, parity=serial.PARITY_ODD)
     if not ser.isOpen():
         print("Opening port")
         ser.open()

@@ -10,7 +10,7 @@ def upload(srcfile):
     with open(srcfile,'rb') as f:
         data = bytearray(f.read())
 
-    ser = serial.Serial('COM6', 1200)
+    ser = serial.Serial('COM16', 1200)
     if not ser.isOpen():
         print("Opening port")
         ser.open()
