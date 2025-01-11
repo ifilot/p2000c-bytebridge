@@ -19,6 +19,9 @@ start:
     int 21h                 ; run interrupt
     call lncr
 
+;===============================================================================
+; READ METADATA
+;===============================================================================
     ; read number of bytes to transfer from serial port
     call receive_word       ; receive 16 bit unsigned integer
     mov [nrbytes],cx        ; store file length
@@ -51,13 +54,14 @@ start:
     je skipinc              ; skip if zero
     inc bh                  ; if not, increment bh
 skipinc:
-    mov [nrpackages],bh     ; store upper byte in number of packages
+    mov [nrpacktotal],bh    ; store number of packages
+    mov [nrpackages],bh     ; store number of packages that remain to be read
 
     ; inform user about number of packages
     mov dx,numpackstr       ; load pointer to string
     mov ah,9                ; print string routine
     int 21h                 ; run interrupt
-    mov bh,[nrpackages]     ; load number of packages
+    mov bh,[nrpacktotal]    ; load number of packages
     call printbyte          ; print number of packages in hex
     call lncr               ; print newline character
 
@@ -84,19 +88,23 @@ nextchar:
     int 21h                 ; run interrupt
     call lncr               ; print newline character
 
-    ; read datastream
+;===============================================================================
+; READ DATASTREAM
+;===============================================================================
     mov dx,startrecstr      ; set pointer to message string
     mov ah,09h              ; print error string to screen
     int 21h                 ; run it
     call lncr               ; print newline character
+
+    ; initialize buffer and counter
     mov di,buffer
-    mov cx,[nrbytes]
-nextbyte:
-    mov ah,2
-    int 14h
-    mov [di],al
-    inc di
-    loop nextbyte
+nextpacket:
+    call read_packet        ; read packet
+    mov cl,[nrpackages]     ; load number of packages that remain
+    dec cl                  ; decrement by one
+    mov [nrpackages],cl     ; store value in memory
+    cmp cl,0                ; check whether all packets have been received
+    jne nextpacket          ; if not, read next packet
 
     ; calculate and print checksum
     mov dx,[nrbytes]
@@ -110,6 +118,9 @@ nextbyte:
     int 21h
     call lncr
 
+;===============================================================================
+; WRITE FILE
+;===============================================================================
     ; start writing procedure
     mov ah,9
     mov dx,writestr
@@ -151,6 +162,39 @@ nextbyte:
     mov dx,donestr
     int 21h
     int 20h
+
+;-------------------------------------------------------------------------------
+; Read packet routine
+;-------------------------------------------------------------------------------
+read_packet:
+    mov cx, 256             ; number of bytes in a packet
+.nextbyte:
+    mov ah,2
+    int 14h
+    mov [di],al
+    inc di
+    loop .nextbyte
+    mov bh, [nrpacktotal]   ; load total number of packages (T)
+    mov bl, [nrpackages]    ; load number of packages that need to be read (N)
+    sub bh,bl               ; T - N
+    inc bh                  ; increment by one
+    call printbyte          ; print package number (output BH as HEX)
+    mov ah,9                ; print string
+    mov dx,packsplitstr     ; pointer to string
+    int 21h                 ; run interrupt
+    mov si,di               ; transfer buffer pointer to si
+    sub si, 256             ; subtract 256 to get to begin of package
+    mov dx, 256             ; number of bytes in checksum
+    call crc16              ; calculate checksum, store result in BX
+    mov ah,1
+    mov al,bh               ; transfer high byte
+    int 14h
+    mov ah,1
+    mov al,bl               ; transfer low byte
+    int 14h
+    call printword          ; print checksum to screen
+    call lncr
+    ret
 
 ;-------------------------------------------------------------------------------
 ; Receive word in CX
@@ -289,6 +333,9 @@ filenamestr:
 numpackstr:
     db "Number of packages to receive: 0x$"
 
+packsplitstr:
+    db ": 0x$"
+
 startrecstr:
     db "Receiving bytes. This might take a while.$"
 
@@ -321,8 +368,12 @@ nrbytes:
 checksum:
     resb 2
 
-; number of 256-byte packages to receive
+; number of 256-byte packages that remain
 nrpackages:
+    resb 1
+
+; total number of 256 byte packages to receive
+nrpacktotal:
     resb 1
 
 ; dword with file pointer

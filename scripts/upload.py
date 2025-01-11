@@ -5,10 +5,10 @@ import time
 import tqdm
 
 def main():
-    upload('../src/bb.com', 'b:bb2.com')
+    #upload('../src/bb.com', 'b:bb2.com')
     
     # example game
-    #upload('../examples/avoid.exe', 'b:avoid.exe')
+    upload('../examples/avoid.exe', 'b:avoid.exe')
 
 def upload(srcfile, dstfile):
     with open(srcfile,'rb') as f:
@@ -47,10 +47,20 @@ def upload(srcfile, dstfile):
     
     # transmit data
     nrchunks = len(data) // 256 + (1 if len(data) % 256 > 0 else 0)
+    data.extend([0x00] * (nrchunks * 256 - len(data)))
     s = 0
-    for i in tqdm.tqdm(range(nrchunks)):
+    for i in range(nrchunks):
         ser.write(data[s:min(s+256, len(data))])
+        checksum = crc16(data[s:min(s+256, len(data))])
+        print("Transfer: 0x%04X" % checksum, end="")
         s += 256
+        rsp = ser.read(2)
+        checksum_response = (int(rsp[0]) << 8) | rsp[1]
+        print('   Receive: 0x%04X bytes' % checksum_response, end="")
+        if checksum == checksum_response:
+            print('  [PASS]')
+        else:
+            print('  [FAIL]')
         time.sleep(0.1) # small delay to allow the P2C to catch up
 
 def crc16(data):
